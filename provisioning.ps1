@@ -43,70 +43,70 @@ $TranscriptFile = "$ProvisioningPath\${Date}_provisioning.txt"
 # Powershell logging function with here-string and indentation cleanup
 function Write-CleanLog
 {
-	param (
-		[Parameter(Position = 0)]
-		[string[]]$Messages,
-		[string]$Color = "White" # Default color
-	)
+    param (
+        [Parameter(Position = 0)]
+        [string[]]$Messages,
+        [string]$Color = "White" # Default color
+    )
 
-	# Build the log lines
-	foreach ($msg in $Messages)
-	{
-		if ([string]::IsNullOrWhiteSpace($msg))
-		{
-			Write-Host "" # True blank line
-		} else
-		{
-			$timestamp = Get-Date -Format 'HH:mm:ss'
-			Write-Host "[$timestamp] $msg" -ForegroundColor $Color
-		}
-	}
+    # Build the log lines
+    foreach ($msg in $Messages)
+    {
+        if ([string]::IsNullOrWhiteSpace($msg))
+        {
+            Write-Host "" # True blank line
+        } else
+        {
+            $timestamp = Get-Date -Format 'HH:mm:ss'
+            Write-Host "[$timestamp] $msg" -ForegroundColor $Color
+        }
+    }
 }
 
 function Test-InternetConnection
 {
-	param (
-		[string]$Target = '8.8.8.8',
-		[int]$IntervalSeconds = 5
-	)
+    param (
+        [string]$Target = '8.8.8.8',
+        [int]$IntervalSeconds = 5
+    )
 
-	# Save the original progress preference for restoration
-	# Using $global: ensures the variable is set regardless of the function's scope
-	$originalProgressPreference = $global:ProgressPreference
-	$global:ProgressPreference = 'SilentlyContinue'
+    # Save the original progress preference for restoration
+    # Using $global: ensures the variable is set regardless of the function's scope
+    $originalProgressPreference = $global:ProgressPreference
+    $global:ProgressPreference = 'SilentlyContinue'
 
-	try
-	{
-		Write-CleanLog @("", "Testing internet connection. Target: $Target", "") -Color Green
-		$connected = $false
-		do
-		{
-			try
-			{
-				# The progress bar is now suppressed by the $ProgressPreference variable
-				$testResult = Test-NetConnection -ComputerName $Target -InformationLevel Quiet -ErrorAction Stop
-				$connected = $testResult
-			} catch
-			{
-				# Catch block handles network errors gracefully instead of failing
-				$connected = $false
-			}
+    try
+    {
+        Write-CleanLog @("", "Testing internet connection. Target: $Target", "") -Color Green
+        $connected = $false
+        do
+        {
+            try
+            {
+                # The progress bar is now suppressed by the $ProgressPreference variable
+                $testResult = Test-NetConnection -ComputerName $Target -InformationLevel Quiet -ErrorAction Stop
+                $connected = $testResult
+            } catch
+            {
+                # Catch block handles network errors gracefully instead of failing
+                $connected = $false
+            }
 
-			if (-not $connected)
-			{
-				Write-CleanLog @(
-					"Waiting for network connection... (sleeping for $IntervalSeconds seconds)"
-				) -Color DarkGray
-				Start-Sleep -Seconds $IntervalSeconds
-			}
-		} while (-not $connected)
+            if (-not $connected)
+            {
+                Write-CleanLog @(
+                    "Waiting for network connection... (sleeping for $IntervalSeconds seconds)"
+                ) -Color DarkGray
+                Start-Sleep -Seconds $IntervalSeconds
+            }
+        } while (-not $connected)
 
-		Write-CleanLog @("Network connection successful!") -Color Green
-	} finally
-	{
-		# Restore the original progress preference
-		$global:ProgressPreference = $originalProgressPreference
-	}
+        Write-CleanLog @("Network connection successful!") -Color Green
+    } finally
+    {
+        # Restore the original progress preference
+        $global:ProgressPreference = $originalProgressPreference
+    }
 }
 
 # =============================================================================
@@ -122,80 +122,150 @@ Test-InternetConnection
 
 # Configure power settings
 $powerCommands = @(
-	"powercfg /setacvalueindex SCHEME_CURRENT SUB_BUTTONS LIDACTION 0",
-	"powercfg /x -monitor-timeout-ac 0",
-	"powercfg /x -standby-timeout-ac 0",
-	"powercfg /x -hibernate-timeout-ac 0"
+    "powercfg /setacvalueindex SCHEME_CURRENT SUB_BUTTONS LIDACTION 0",
+    "powercfg /x -monitor-timeout-ac 0",
+    "powercfg /x -standby-timeout-ac 0",
+    "powercfg /x -hibernate-timeout-ac 0"
 )
 Write-CleanLog @(
-	"",
-	"Setting power settings when plugged to AC to Never and Do Nothing when laptop lid closed",
-	""
+    "",
+    "Setting power settings when plugged to AC to Never and Do Nothing when laptop lid closed",
+    ""
 )
 $powerCommands | ForEach-Object {
-	Write-CleanLog @("$_") -Color DarkGray
-	cmd /c $_
+    Write-CleanLog @("$_") -Color DarkGray
+    cmd /c $_
 }
 
 # Create a shortcut link to quickly access the Provisioning folder
 Write-CleanLog @("", "Create folder shortcut to quickly access Provisioning folder")
 $WScriptShell = New-Object -ComObject WScript.Shell
-$Shortcut = $WScriptShell.CreateShortcut("C:\Users\Administrator\Desktop\Provisioning.lnk")
+$Shortcut = $WScriptShell.CreateShortcut("C:\Users\faust\Desktop\Provisioning.lnk")
 $Shortcut.TargetPath = "C:\ProgramData\Microsoft\Provisioning"
 $Shortcut.Save()
 
-if (Test-Path "$env:SYSTEMDRIVE\Users\Administrator\Desktop\Provisioning.lnk")
+if (Test-Path "$env:SYSTEMDRIVE\Users\faust\Desktop\Provisioning.lnk")
 {
-	Write-CleanLog @("", "Provisioning shortcut exists.") -Color Green
+    Write-CleanLog @("", "Provisioning shortcut exists.") -Color Green
 }
 
 # configure time zone
 Write-CleanLog @("", "Checking if Windows Time Service is running...")
 if ((Get-Service -Name w32time).Status -eq 'Running')
 {
-	Write-CleanLog @(
-		"",
-		"Windows Time Service is running. Setting the time zone to Central Standard Time.")
-	Write-CleanLog @(
-		"",
-		"Get-TimeZone -ListAvailable | Where-Object{`$_.DisplayName -like `"*Central Time*`"} | Set-TimeZone") -Color DarkGray
-	Write-CleanLog @(
-		"",
-		"Force a time sync")
-	Write-CleanLog @(
-		"",
-		"w32tm /resync /rediscover", "") -Color DarkGray
+    Write-CleanLog @(
+        "",
+        "Windows Time Service is running. Setting the time zone to Central Standard Time.")
+    Write-CleanLog @(
+        "",
+        "Get-TimeZone -ListAvailable | Where-Object{`$_.DisplayName -like `"*Central Time*`"} | Set-TimeZone") -Color DarkGray
+    Write-CleanLog @(
+        "",
+        "Force a time sync")
+    Write-CleanLog @(
+        "",
+        "w32tm /resync /rediscover", "") -Color DarkGray
 
-	Get-TimeZone -ListAvailable | Where-Object{$_.DisplayName -like "*Central Time*"} | Set-TimeZone
+    Get-TimeZone -ListAvailable | Where-Object{$_.DisplayName -like "*Central Time*"} | Set-TimeZone
 
-	w32tm /resync /rediscover
+    w32tm /resync /rediscover
 } else
 {
-	Write-CleanLog @(
-		"",
-		"Windows Time Service is NOT running. Starting the service.") -Color Red
-	Write-CleanLog @(
-		"",
-		"Start-Service w32time") -Color DarkGray
-	Write-CleanLog @(
-		"",
-		"Setting the time zone to Central Standard Time.")
-	Write-CleanLog @(
-		"",
-		"Get-TimeZone -ListAvailable | Where-Object{`$_.DisplayName -like `"*Central Time*`"} | Set-TimeZone") -Color DarkGray
-	Write-CleanLog @(
-		"",
-		"Force a time sync")
-	Write-CleanLog @(
-		"",
-		"w32tm /resync /rediscover", "") -Color DarkGray
+    Write-CleanLog @(
+        "",
+        "Windows Time Service is NOT running. Starting the service.") -Color Red
+    Write-CleanLog @(
+        "",
+        "Start-Service w32time") -Color DarkGray
+    Write-CleanLog @(
+        "",
+        "Setting the time zone to Central Standard Time.")
+    Write-CleanLog @(
+        "",
+        "Get-TimeZone -ListAvailable | Where-Object{`$_.DisplayName -like `"*Central Time*`"} | Set-TimeZone") -Color DarkGray
+    Write-CleanLog @(
+        "",
+        "Force a time sync")
+    Write-CleanLog @(
+        "",
+        "w32tm /resync /rediscover", "") -Color DarkGray
 
-	Start-Service w32time
+    Start-Service w32time
 
-	Get-TimeZone -ListAvailable | Where-Object{$_.DisplayName -like "*Central Time*"} | Set-TimeZone
+    Get-TimeZone -ListAvailable | Where-Object{$_.DisplayName -like "*Central Time*"} | Set-TimeZone
 
-	w32tm /resync /rediscover
+    w32tm /resync /rediscover
 }
+
+$dcuInstallScript = "$PSScriptRoot\dell\dell-commandupdate-install-winget.ps1"
+Write-CleanLog @("", "Dell Command | Update Install") -Color Yellow
+Write-CleanLog @(
+    "",
+    (
+        "Start-Process -FilePath `"powershell.exe`" " +
+        "-ArgumentList `"-ExecutionPolicy Bypass -File `"$dcuInstallScript`" -NoNewWindow -Wait`""
+    )
+    ""
+) -Color DarkGray
+
+Start-Process -FilePath "powershell.exe" `
+    -ArgumentList "-ExecutionPolicy Bypass -File `"$dcuInstallScript`"" -NoNewWindow -Wait
+
+$dcuImportScript = "$PSScriptRoot\dell\dell-commandupdate-import-config.ps1"
+Write-CleanLog @("", "Dell Command | Update Import Configuration") -Color Yellow
+Write-CleanLog @(
+    "",
+    (
+        "Start-Process -FilePath `"powershell.exe`" " +
+        "-ArgumentList `"-ExecutionPolicy Bypass -File `"$dcuImportScript`" -NoNewWindow -Wait`""
+    )
+    ""
+) -Color DarkGray
+
+Start-Process -FilePath "powershell.exe" `
+    -ArgumentList "-ExecutionPolicy Bypass -File `"$dcuImportScript`"" -NoNewWindow -Wait
+
+$dcuScanScript = "$PSScriptRoot\dell\dell-commandupdate-scan.ps1"
+Write-CleanLog @("", "Dell Command | Update Scan") -Color Yellow
+Write-CleanLog @(
+    "",
+    (
+        "Start-Process -FilePath `"powershell.exe`" " +
+        "-ArgumentList `"-ExecutionPolicy Bypass -File `"$dcuScanScript`" -NoNewWindow -Wait`""
+    )
+    ""
+) -Color DarkGray
+
+Start-Process -FilePath "powershell.exe" `
+    -ArgumentList "-ExecutionPolicy Bypass -File `"$dcuScanScript`"" -NoNewWindow -Wait
+
+$dcuApplyScript = "$PSScriptRoot\dell\dell-commandupdate-apply.ps1"
+Write-CleanLog @("", "Dell Command | Update Apply") -Color Yellow
+Write-CleanLog @(
+    "",
+    (
+        "Start-Process -FilePath `"powershell.exe`" " +
+        "-ArgumentList `"-ExecutionPolicy Bypass -File `"$dcuApplyScript`" -NoNewWindow -Wait`""
+    )
+    ""
+) -Color DarkGray
+
+Start-Process -FilePath "powershell.exe" `
+    -ArgumentList "-ExecutionPolicy Bypass -File `"$dcuApplyScript`"" -NoNewWindow -Wait
+
+$regScript = "$PSScriptRoot\utility\registries.ps1"
+Write-CleanLog @("", "Applying other registries") -Color Yellow
+Write-CleanLog @(
+    "",
+    (
+        "Start-Process -FilePath `"powershell.exe`" " +
+        "-ArgumentList `"-ExecutionPolicy Bypass -File `"$regScript`" -NoNewWindow -Wait`""
+    )
+    ""
+) -Color DarkGray
+
+Start-Process -FilePath "powershell.exe" `
+    -ArgumentList "-ExecutionPolicy Bypass -File `"$regScript`"" -NoNewWindow -Wait
 
 Write-CleanLog @("", "Exiting script.", "")
 Write-Host "Transcript stopped, output file is $TranscriptFile"
